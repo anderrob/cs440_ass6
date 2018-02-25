@@ -1,3 +1,10 @@
+// Robert Hayden Anderson
+//CS440 Assignment 6
+//Join Algorithm by Thomas Noelcke
+//Because the join algorithm was created by Thomas Noelcke
+//I will source the top of each function/struct that he made for his join
+//Each that I wrote or changed for my purposes, I will mark as mine.
+
 
 #include<iostream>
 #include<stdio.h>
@@ -20,14 +27,10 @@ void crash_test() {
 }
 
 using namespace std;
-
-//struct definitions
-//sruct constant that will store the length of a character.
 const int STRING_LEN = 40;
  
-
+//source: Thomas Noelcke
 //this struct represents an employee in our employee relation.
-
 typedef struct employee
 {
     long int eid;
@@ -36,7 +39,7 @@ typedef struct employee
     double salary;
     
 } employee;
-
+//source: Thomas Noelcke
 //this struct represents a department in our department relation.
 typedef struct department 
 {
@@ -46,7 +49,7 @@ typedef struct department
     double budget;
    
 } department;
-
+//source: Thomas Noelcke
 typedef struct empDepartment 
 {
     long int did;
@@ -59,6 +62,7 @@ typedef struct empDepartment
     long int managerId;    
 } empDepartment;
 
+//Mine
 typedef struct logRecord{
     long int dept_position;
     long int emp_position;
@@ -68,42 +72,45 @@ typedef struct logRecord{
 
 }logRecord;
 
-bool compareEmp(employee* lhs, employee* rhs){ return lhs->eid < rhs->eid; }
-bool compareDep(department* lhs, department* rhs) {return lhs->managerId < rhs->managerId;}
+
+
+
+
 
 //Function Headers
+//Source: Thomas Noelcke
 employee* getEmpTouple(FILE* file, logRecord* log);
 department* getDeptTouple(FILE* file, logRecord* log);
 empDepartment* copy(department* dep, employee* emp);
 FILE* openFile(const char* fname,const char* args);
 void displayEmp(employee* emp);
 void displayDep(department* dep);
-void displayDepEmp(empDepartment* ed);
-
 void writeEmpDepartment(FILE* file, empDepartment* join, logRecord* log);
-void writeToLog(FILE* LogFile, logRecord* tuple);
-void foundAMatch(FILE* output, FILE* depFile, department* dep, employee* emp);
 void freeEmp(employee* emp);
 void freeDep(department* dep);
+
+//Source originally was Thomas Noelcke,I edited to add recovery
 void join(FILE* output, FILE* depFile, FILE* empFile, FILE* logFile);
+
+
+//Source Mine
+void writeToLog(FILE* LogFile, logRecord* tuple);
+void set_fp(FILE* output, FILE* depFile, FILE* empFile, FILE* logFile, logRecord* record);
+
+//source: https://stackoverflow.com/questions/12774207/fastest-way-to-check-if-a-file-exist-using-standard-c-c11-c
 inline bool FileExists (const string& name);
 
-void set_fp(FILE* output, FILE* depFile, FILE* empFile, FILE* logFile, logRecord* record);
-//long int getFileLineAmount(FILE * file);
 
 
 //Constants
 const int NUM_BLOCKS = 22;
-const char EMP_FNAME[] = "sorted_emp.csv";
-const char DEPT_FNAME[] = "sorted_dept.csv";
+const char EMP_FNAME[] = "Emp.csv";
+const char DEPT_FNAME[] = "Dept.csv";
 const char OUTPUT_FNAME[] = "join.csv";
 const char LOG_FNAME[] = "joinLog";
 
 // Main function
 int main(){
-
-    
-
     FILE* depFile = openFile(DEPT_FNAME, "r");
     FILE* empFile = openFile(EMP_FNAME, "r");
     FILE* outFile;
@@ -130,6 +137,48 @@ int main(){
     exit(0);
 }
 
+
+//Source:Mine
+void writeToLog(FILE* LogFile, logRecord* tuple){
+    char write_or_read[6];
+    if (tuple->write == 0){strcpy(write_or_read, "d_read");}else if(tuple->write == -1){strcpy(write_or_read, "e_read");}else{ strcpy(write_or_read, "write");}
+    fprintf(LogFile, "%ld,%ld,%ld,%s\n", tuple->dept_position, tuple->emp_position, tuple->join_position, write_or_read);
+    fflush(LogFile);
+
+}
+//Source:Mine
+void set_fp(FILE* output, FILE* depFile, FILE* empFile, FILE* logFile, logRecord* record){
+    //look in logfile
+    //put fp at end SEEKEND
+    fseek (logFile, 0, SEEK_END);
+    int nl=0;
+    int converter_int;
+    int i=ftell(logFile);
+    char temp;
+    
+    while (nl < 2){
+        converter_int = fgetc(logFile);
+        temp = converter_int;
+        if( temp == '\n'){nl++;}
+        i--;
+        fseek (logFile, i, SEEK_SET);
+    }
+    //backup until second /n
+    //move up 1
+    fseek (logFile, (i + 2), SEEK_SET);
+    //set_fps to 
+    fscanf(logFile, "%ld,%ld,%ld,%d\n", &record->dept_position, &record->emp_position, &record->join_position, &record->write);
+    fseek(depFile, record->dept_position, SEEK_SET);
+    fseek(empFile, record->emp_position, SEEK_SET);
+    fseek(output, record->join_position, SEEK_SET);
+
+}
+
+
+
+
+
+//Source: originally was Thomas Noelcke,I edited to add recovery
 //this function preforms the join by reading in one tuple from each file
 //and attempting the join. IN the future this function will also be responsible for
 //preforming actions to log all steps.
@@ -139,8 +188,7 @@ void join(FILE* output, FILE* depFile, FILE* empFile, FILE* logFile){
     department* dep;
     logRecord* record =NULL;
     record = new logRecord;
-    
-    
+     
     //this value will get set to true if we hit EOF on either file.
     emp = getEmpTouple(empFile, record);
     writeToLog(logFile, record);
@@ -187,33 +235,8 @@ void join(FILE* output, FILE* depFile, FILE* empFile, FILE* logFile){
 
 
 
-//this function takes a file name and a string of args
-//opens up the file and stops the program if the file
-//doesn't open. Takes either r or w for args.
-FILE* openFile(const char* fname,const char* args){
-	FILE* fp = fopen(fname, args);
-	if(!fp){
-		perror("Error opening file");
-		exit(1);
-	}
-}
 
-//frees the memory for a single employee
-void freeEmp(employee* emp){
-  if(emp != NULL){
-    delete emp;
-    emp = NULL;
-  }
-}
-
-//frees the memeory for a single department.
-void freeDep(department* dep){
-  if(dep != NULL){
-    delete dep;
-    dep = NULL;
-  }
-}
-
+//Source: originally was Thomas Noelcke,I edited to add recovery
 //this function takes a file pointer and a merged empDepartment pointer
 //and writes this out to the file.
 void writeEmpDepartment(FILE* file, empDepartment* join, logRecord* record)
@@ -223,7 +246,7 @@ void writeEmpDepartment(FILE* file, empDepartment* join, logRecord* record)
 	fprintf(file,"\"%ld\",\"%ld\",\"%s\",\"%s\",\"%.2lf\",\"%.2lf\",\%li\",\"%li\"\n", join->did, join->eid, join->dname, join->ename, join->budget, join->salary, join->managerId, join->age);	
     fflush(file);
 }
-
+//Source: originally was Thomas Noelcke,I edited to add recovery
 //this function takes a file pointer and returns a pointer to an employee object.
 employee* getEmpTouple(FILE* file, logRecord* record)
 {
@@ -238,7 +261,7 @@ employee* getEmpTouple(FILE* file, logRecord* record)
 	}
 	return emp;
 }
-
+//Source: originally was Thomas Noelcke,I edited to add recovery
 //this function takes a file point and returns a pointer to a department object.
 department* getDeptTouple(FILE* file, logRecord* record)
 {	
@@ -253,6 +276,45 @@ department* getDeptTouple(FILE* file, logRecord* record)
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+//Source: Thomas Noelcke
+//this function takes a file name and a string of args
+//opens up the file and stops the program if the file
+//doesn't open. Takes either r or w for args.
+FILE* openFile(const char* fname,const char* args){
+	FILE* fp = fopen(fname, args);
+	if(!fp){
+		perror("Error opening file");
+		exit(1);
+	}
+}
+//Source: Thomas Noelcke
+//frees the memory for a single employee
+void freeEmp(employee* emp){
+  if(emp != NULL){
+    delete emp;
+    emp = NULL;
+  }
+}
+//Source: Thomas Noelcke
+//frees the memeory for a single department.
+void freeDep(department* dep){
+  if(dep != NULL){
+    delete dep;
+    dep = NULL;
+  }
+}
+//Source: Thomas Noelcke
 //this function takes a department pointer and an employee pointer
 //and creates a new empDepartment by doing a deep copy of dep and emp.
 empDepartment* copy(department* dep, employee* emp)
@@ -274,7 +336,7 @@ empDepartment* copy(department* dep, employee* emp)
 
     return copy;
 }
-
+//Source: Thomas Noelcke
 //Takes a department pointer and displays that department to standard out.
 void displayDep(department* dep){
 	if(dep){
@@ -283,7 +345,7 @@ void displayDep(department* dep){
 		cout << "No Department to display\n";
 	}
 }
-
+//Source: Thomas Noelcke
 //Takes an employee pointer and displays the employee to stdout.
 void displayEmp(employee* emp){
 	if(emp){
@@ -292,40 +354,8 @@ void displayEmp(employee* emp){
 		cout << "No Employee to display\n";
 	}
 }
-
-//Takes and employee pointer and displays the Employee out to stdout.
-//Used for debugging.
-void displayDepEmp(empDepartment* ed){
-	if(ed){
-		cout<<"eid: "<< ed->eid <<" name: " << ed->ename << " age: " << ed->age << " salary: " << ed->salary << "\n";
-		cout<<"did: "<<ed->did<<" name: " << ed->dname << " budget: " << ed->budget << " Managerid: " << ed->managerId << "\n";
-	} else {
-		cout << "Nothing to display\n";
-	}
-}
-
-
-
-
-void writeToLog(FILE* LogFile, logRecord* tuple){
-    char write_or_read[6];
-    if (tuple->write == 0){strcpy(write_or_read, "d_read");}else if(tuple->write == -1){strcpy(write_or_read, "e_read");}else{ strcpy(write_or_read, "write");}
-    fprintf(LogFile, "%ld,%ld,%ld,%s\n", tuple->dept_position, tuple->emp_position, tuple->join_position, write_or_read);
-    fflush(LogFile);
-
-}
-
 //check if file exists
 //source: https://stackoverflow.com/questions/12774207/fastest-way-to-check-if-a-file-exist-using-standard-c-c11-c
-// inline bool FileExists (const string& name) {
-//   struct stat buffer;   
-//   return (stat (name.c_str(), &buffer) == 0); 
-// }
-// bool FileExists(const char *fileName)
-// {
-//     ifstream infile(fileName);
-//     return infile.good();
-// }
 inline bool FileExists (const string& name) {
     if (FILE *file = fopen(name.c_str(), "r")) {
         fclose(file);
@@ -333,31 +363,4 @@ inline bool FileExists (const string& name) {
     } else {
         return false;
     }   
-}
-
-void set_fp(FILE* output, FILE* depFile, FILE* empFile, FILE* logFile, logRecord* record){
-    //look in logfile
-    //put fp at end SEEKEND
-    fseek (logFile, 0, SEEK_END);
-    int nl=0;
-    int converter_int;
-    int i=ftell(logFile);
-    char temp;
-    
-    while (nl < 2){
-        converter_int = fgetc(logFile);
-        temp = converter_int;
-        if( temp == '\n'){nl++;}
-        i--;
-        fseek (logFile, i, SEEK_SET);
-    }
-    //backup until second /n
-    //move up 1
-    fseek (logFile, (i + 2), SEEK_SET);
-    //set_fps to 
-    fscanf(logFile, "%ld,%ld,%ld,%d\n", &record->dept_position, &record->emp_position, &record->join_position, &record->write);
-    fseek(depFile, record->dept_position, SEEK_SET);
-    fseek(empFile, record->emp_position, SEEK_SET);
-    fseek(output, record->join_position, SEEK_SET);
-
 }
